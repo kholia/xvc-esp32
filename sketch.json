@@ -1,0 +1,6 @@
+{
+  "cpu": {
+    "fqbn": "m5stack:esp32:m5stack-atom",
+    "port": "/dev/ttyUSB0"
+  }
+}
