@@ -14,6 +14,7 @@
 #include <cstdint>
 #include <cstring>
 #include <memory>
+#include <cstdlib>
 
 static const char* MY_SSID = "ssid";
 static const char* MY_PASSPHRASE = "wifi_passphrase";
@@ -335,11 +336,38 @@ public:
     }
 };
 
+static void serialTask(void*)
+{
+    std::size_t pendingBytesH2T = 0;
+    std::size_t bytesWrittenH2T = 0;
+    static std::uint8_t h2tBuffer[128];
+    std::size_t pendingBytesT2H = 0;
+    std::size_t bytesWrittenT2H = 0;
+    static std::uint8_t t2hBuffer[128];
+    
+    while(true) {
+        if( Serial.available() ) {
+            Serial1.write(Serial.read());
+        }
+        else if( Serial1.available() ) {
+            Serial.write(Serial1.read());
+        }
+        else {
+            vTaskDelay(pdMS_TO_TICKS(1));
+        }
+    }
+}
+
 void setup()
 {
     jtag_init();
 
     WiFi.begin(MY_SSID, MY_PASSPHRASE);
+    Serial.begin(115200);
+    Serial1.begin(115200, SERIAL_8N1, 33, 23);
+    
+    TaskHandle_t handle;
+    xTaskCreatePinnedToCore(serialTask,"serial", 4096, nullptr, 1, &handle, APP_CPU_NUM);
 }
 
 enum class AppState
@@ -357,7 +385,7 @@ void loop()
     switch(state) {
     case AppState::WaitingAPConnection: {
         if( WiFi.isConnected() ) {
-            ESP_LOGI(TAG, "WiFi connection ready.");
+            ESP_LOGI(TAG, "WiFi connection ready. IP: %s", WiFi.localIP().toString().c_str());
             state = AppState::APConnected; 
         }
         break;
