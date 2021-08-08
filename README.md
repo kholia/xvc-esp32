@@ -1,48 +1,94 @@
-# Xilinx Virtual Cable Server for ESP32
+### Xilinx Virtual Cable Server for ESP32
 
-## 概要
+#### Overview
 
-Xilinx製FPGAへの書き込みを行うためのプロトコル (XVC : Xilinx Virtual Cable) のESP32向け実装です。
+This is an implementation of the `XVC - Xilinx Virtual Cable` protocol for
+writing to Xilinx FPGAs from an ESP32.
 
-Derek Mulcahy氏の Raspberry Pi向け実装(https://github.com/derekmulcahy/xvcpi) をESP32向けに移植しています。
+Main Author: Kenta IDA (https://github.com/ciniml)
 
-ESP32を対象FPGAのJTAGピン (TDI, TDO, TMS, TCK) に接続することにより、WiFi経由でXilinx製のツール (Vivadoなど) からFPGAのJTAGポートにアクセスすることができます。
+Author 2: Dhiru Kholia (remove gpio optimizations, fix `jtag_xfer` function to mimic `xvcpi`, fix portability problems)
+
+Upstream URL: https://github.com/ciniml/xvc-esp32
+
+This is a port of Derek Mulcahy's XVC implementation for Raspberry Pi
+(https://github.com/derekmulcahy/xvcpi) to ESP32.
+
+By connecting the ESP32 to the JTAG pins (TDI, TDO, TMS, TCK) of the target
+FPGA, you can access the JTAG port of the FPGA from a Xilinx tool (Vivado,
+etc.) via WiFi.
 
 ![M5Atom](picture.jpg)
 
-写真の例では、M5Stack製のESP32モジュール [M5Atom Lite](https://docs.m5stack.com/#/en/core/atom_lite) とZynq XC7Z010を接続しています。
+In this example photo, the M5Stack ESP32 module [M5Atom Lite](https://docs.m5stack.com/#/en/core/atom_lite) is connected to a Zynq XC7Z010 FPGA (on EBAZ4205 'Development' Board).
 
-この状態で、VivadoのHardware Managerから `Add Virtual Cable` でVirtual Cableとして追加して接続すると、通常のJTAGアダプタと同様にILAの波形観測などを行えます。
+In this state, if you add and connect as a Virtual Cable from Vivado Hardware Manager with `Add Virtual Cable`, you can observe the waveform of ILA in the same way as a normal JTAG adapter.
 
 ![ILA](vivado_ila.png)
 
-## 使い方
+#### How to use
 
-`xvc-esp32.ino` を使いたいESP32ボード向けにArduino IDEでビルドして書き込むだけです。
+Change the WiFi credentials in the `credentials.h` file.
 
-その際、現状のスケッチではWiFiの接続先をコードに埋め込んでいますので、適宜修正してください。
-
-```c++
-static const char* MY_SSID = "ssid";
-static const char* MY_PASSPHRASE = "wifi_passphrase";
-```
-
-また、現状は M5Atom用のピン定義になっていますので、使いたいESP32ボード向けにピン定義を変更してください。
+Note: The default pin mappings for the common, low-cost `ESP32 WROOM DevKit v1`
+development board are:
 
 ```
-/* GPIO numbers for each signal. Negative values are invalid */
-/* Note that currently only supports GPIOs below 32 to improve performance */
-static constexpr const int tms_gpio = 22;
-static constexpr const int tck_gpio = 19;
-static constexpr const int tdo_gpio = 21;
-static constexpr const int tdi_gpio = 25;
+TDI = D25, TDO = D21, TCK = D19, TMS = D22
 ```
 
-コメントにあるように、現状は高速化のためにGPIO0～31までのみ使用可能です。
+Feel free to experiment with different ESP32 development boards - most should
+just work with any problems.
 
+![Common ESP32 Dev Board](./ESP-32-Dev-Board.jpg)
 
-## ライセンス
+| ESP32 Dev Board | JTAG |
+|-----------------|------|
+| 25 (D25)        | TDI  |
+| 21 (D21)        | TDO  |
+| 19 (D19)        | TCK  |
+| 22 (D22)        | TMS  |
 
-大本の AVNET による実装が CC0 1.0 だったので、Derek Mulcahy氏の Raspberry Pi向け実装も CC0 1.0となっています。
+Finally, build the program using Arduino IDE and write it to the ESP32 board.
 
-従って、本実装も (日本国内でのCC0の有効性はともかく) CC0 1.0 ということにします。
+#### How to use (Linux version)
+
+```
+make install_arduino_cli
+make install_platform
+make deps
+make upload
+```
+
+#### Rough Performance Stats ("Speed")
+
+Writing a small bitstream (Blinky with `PS7 IP` + Ethernet stuff) sized around
+400 KiB using Vivado 2021.1 takes around 10 seconds.
+
+Kenta-San's version may offer faster performance, perhaps at the cost of
+losing some portability across different ESP32 boards.
+
+### Tips
+
+If you see the `End of startup status: LOW` error message in Vivado, check the
+FPGA power supply's voltage and current ratings.
+
+If cost and ease-of-availability are the driving constraints (at the cost of
+speed), then this project can suffice. If higher programming speed is a
+requirement, I recommend using `xc3sprog` with an FT2232H board.
+
+### Related Ideas / Projects
+
+- https://github.com/kholia/xvcpi
+- https://github.com/kholia/xvc-pico
+- https://github.com/kholia/xvc-esp8266
+- https://github.com/kholia/Colorlight-5A-75B
+- https://github.com/fusesoc/blinky#ebaz4205-development-board
+
+## License
+
+CC0 1.0 Universal (CC0 1.0) - Public Domain Dedication
+
+https://creativecommons.org/publicdomain/zero/1.0/
+
+Note: See `README-Original.md` for full licensing information.
